@@ -1,6 +1,7 @@
 # cli.py
 import click
 import time
+from csv_excel_tool.common_options import common_dataframe_options
 from csv_excel_tool.converter import csv_to_excel, excel_to_csv
 from csv_excel_tool.splitter import split_csv, split_excel
 from csv_excel_tool.merger import merge_csvs, merge_excels
@@ -21,9 +22,13 @@ def cli():
 @cli.command()
 @click.argument("input_path", type=click.Path(exists=True, dir_okay=False))
 @click.option("--asstr", type=str, default=None, help="指定需要强制转为字符串的列名，多个以逗号分隔")
-@click.option("--rerange", type=str, default=None, help="需要进行重新编号的列名（从 1 开始）")
-def convert(input_path, asstr, rerange):
-    """自动识别并执行 CSV ↔ Excel 的双向转换"""
+# @click.option("--rerange", type=str, default=None, help="需要进行重新编号的列名（从 1 开始）")
+@common_dataframe_options
+def convert(input_path, asstr, distinct, reindex):
+    """ CSV <-> Excel 转换 (支持通用后处理) """
+    
+    from csv_excel_tool.pipeline import apply_common_pipeline
+    from csv_excel_tool.common_options import parse_common_options
 
     p = Path(input_path)
     suffix = p.suffix.lower()
@@ -34,20 +39,28 @@ def convert(input_path, asstr, rerange):
         if asstr else None
     )
 
-    rerange_col = rerange.strip() if rerange else None
+    distinct_cols, reindex_col = parse_common_options(distinct, reindex)
 
     logger.info(f"输入文件: {str(p)}")
+
+    def df_callback(df):
+        return apply_common_pipeline(
+            df,
+            distinct=distinct_cols,
+            reindex_col=reindex_col,
+            logger=logger
+        )
 
     # ------- 分支转换 -------
     if suffix == ".csv":
         out = p.with_suffix(".xlsx")
         logger.info("开始执行 CSV → Excel 转换")
-        csv_to_excel(p, out, asstr_cols=asstr_cols, rerange_col=rerange_col, logger=logger)
+        csv_to_excel(p, out, asstr_cols=asstr_cols, callbacks=[df_callback], logger=logger)
 
     elif suffix in {".xlsx", ".xls"}:
         out = p.with_suffix(".csv")
         logger.info("开始执行 Excel → CSV 转换")
-        excel_to_csv(p, out, asstr_cols=asstr_cols, rerange_col=rerange_col, logger=logger)
+        excel_to_csv(p, out, asstr_cols=asstr_cols, callbacks=[df_callback], logger=logger)
 
     else:
         logger.error("错误：不支持的文件格式（仅支持 .csv / .xlsx)")
@@ -78,7 +91,7 @@ def split(input_path, rows, output_dir):
 # 3. 合并
 @cli.command()
 @click.argument('folder', type=click.Path(exists=True))
-@click.option('--pattern', '-p', default="*.csv", help='匹配模式，如 *.csv 或 *.xlsx')
+@click.option('--pattern', '-p', default="*.csv", help='匹配模式，如 *.csv 或 *.xlsx, 默认 *.csv')
 @click.option('--output', '-o', type=str, required=True, help='合并后输出文件名')
 def merge(folder, pattern, output):
     """合并同目录下所有 CSV 或 Excel 文件"""
@@ -91,6 +104,42 @@ def merge(folder, pattern, output):
         merged_file = merge_excels(folder_path, pattern, output_path)
 
     click.echo(str(merged_file))
+
+
+@cli.command()
+@click.argument("input", required=False)
+@click.option('--output', '-o', type=str, required=True, help='处理过后的输出文件')
+@common_dataframe_options
+def run(input, output, distinct, reindex):
+    """
+    通用 DataFrame 处理命令（Unix filter 风格）
+    """
+
+    import sys
+    import pandas as pd
+    from csv_excel_tool.pipeline import apply_common_pipeline
+    from csv_excel_tool.common_options import parse_common_options
+
+    distinct_cols, reindex_col = parse_common_options(distinct, reindex)
+
+    # ---------- 读 ----------
+    if input:
+        df = pd.read_csv(input)
+    else:
+        df = pd.read_csv(sys.stdin)
+
+    # ---------- pipeline ----------
+    df = apply_common_pipeline(
+        df,
+        distinct=distinct_cols,
+        reindex_col=reindex_col,
+        logger=logger
+    )
+
+    # ---------- 写 ----------
+
+    df.to_csv(output, index=False)
+    click.echo(output)
 
 
 @cli.command()

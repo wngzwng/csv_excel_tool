@@ -1,24 +1,9 @@
 # csv_excel_tool/converter.py
-from typing import List, Optional
+from typing import List, Optional, Iterable
 import pandas as pd
 from pathlib import Path
+from csv_excel_tool.df_callbacks import DfCallback, apply_df_callbacks
  
- 
-def apply_rerange(df: pd.DataFrame, col_name: str, logger=None) -> pd.DataFrame:
-    if col_name is None:
-        return df
-
-    if col_name not in df.columns:
-        if logger:
-            logger.warning(f"rerange 列 '{col_name}' 不存在，跳过处理")
-        return df
-
-    if logger:
-        logger.info(f"重新编号列 '{col_name}'  (1..{len(df)})")
-
-    df = df.copy()
-    df[col_name] = range(1, len(df) + 1)
-    return df
 
 # ----------- CSV → Excel -----------
 def csv_to_excel(
@@ -26,7 +11,7 @@ def csv_to_excel(
     excel_path=None,
     *,
     asstr_cols: Optional[List[str]] = None,
-    rerange_col: Optional[str] = None,
+    callbacks: Iterable[DfCallback] | None = None,
     logger=None
 ):
     csv_path = Path(csv_path)
@@ -43,8 +28,7 @@ def csv_to_excel(
             logger.error(f"读取 CSV 失败: {str(e)}")
         raise
 
-    # rerange
-    df = apply_rerange(df, rerange_col)
+    df = apply_df_callbacks(df, callbacks)
 
     # 保存 Excel
     df.to_excel(excel_path, index=False)
@@ -60,7 +44,7 @@ def excel_to_csv(
     csv_path=None,
     *,
     asstr_cols: Optional[List[str]] = None,
-    rerange_col: Optional[str] = None,
+    callbacks: Iterable[DfCallback] | None = None,
     logger=None
 ):
     excel_path = Path(excel_path)
@@ -78,9 +62,8 @@ def excel_to_csv(
             logger.error(f"读取 Excel 失败: {str(e)}")
         raise
 
-    # rerange
-    df = apply_rerange(df, rerange_col)
-
+    df = apply_df_callbacks(df, callbacks)
+    
     # 保存 CSV
     df.to_csv(csv_path, index=False)
 
