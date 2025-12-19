@@ -24,7 +24,7 @@ def cli():
 @click.option("--asstr", type=str, default=None, help="指定需要强制转为字符串的列名，多个以逗号分隔")
 # @click.option("--rerange", type=str, default=None, help="需要进行重新编号的列名（从 1 开始）")
 @common_dataframe_options
-def convert(input_path, asstr, distinct, reindex):
+def convert(input_path, asstr, distinct, reindex, random, seed):
     """ CSV <-> Excel 转换 (支持通用后处理) """
     
     from csv_excel_tool.pipeline import apply_common_pipeline
@@ -48,7 +48,9 @@ def convert(input_path, asstr, distinct, reindex):
             df,
             distinct=distinct_cols,
             reindex_col=reindex_col,
-            logger=logger
+            logger=logger,
+            random=random,
+            seed=seed
         )
 
     # ------- 分支转换 -------
@@ -110,7 +112,7 @@ def merge(folder, pattern, output):
 @click.argument("input", required=False)
 @click.option('--output', '-o', type=str, required=True, help='处理过后的输出文件')
 @common_dataframe_options
-def run(input, output, distinct, reindex):
+def run(input, output, distinct, reindex, random, seed):
     """
     通用 DataFrame 处理命令（Unix filter 风格）
     """
@@ -133,7 +135,9 @@ def run(input, output, distinct, reindex):
         df,
         distinct=distinct_cols,
         reindex_col=reindex_col,
-        logger=logger
+        logger=logger,
+        random=random,
+        seed=seed
     )
 
     # ---------- 写 ----------

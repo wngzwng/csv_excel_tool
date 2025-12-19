@@ -10,6 +10,8 @@ def apply_common_pipeline(
     *,
     distinct: Optional[Iterable[str]] = None,
     reindex_col: Optional[str] = None,
+    random: bool = False,
+    seed: Optional[int] = None,
     logger=None
 ) -> pd.DataFrame:
     """
@@ -24,6 +26,10 @@ def apply_common_pipeline(
             logger=logger
         )
 
+    if random:
+            logger and logger.info(f"Shuffle DataFrame (seed={seed})")
+            df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
+
     if reindex_col:
         df = apply_reindex(
             df,
@@ -31,4 +37,5 @@ def apply_common_pipeline(
             logger=logger
         )
 
+            
     return df
