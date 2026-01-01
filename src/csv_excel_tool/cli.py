@@ -6,6 +6,7 @@ from csv_excel_tool.converter import csv_to_excel, excel_to_csv
 from csv_excel_tool.splitter import split_csv, split_excel
 from csv_excel_tool.merger import merge_csvs, merge_excels
 from csv_excel_tool.utils import tqdm
+from csv_excel_tool.df_io import read_df, write_df
 from csv_excel_tool.fdlogger import FdLogger
 from pathlib import Path
 
@@ -125,10 +126,7 @@ def run(input, output, distinct, reindex, random, seed):
     distinct_cols, reindex_col = parse_common_options(distinct, reindex)
 
     # ---------- 读 ----------
-    if input:
-        df = pd.read_csv(input)
-    else:
-        df = pd.read_csv(sys.stdin)
+    df = read_df(input)
 
     # ---------- pipeline ----------
     df = apply_common_pipeline(
@@ -142,7 +140,7 @@ def run(input, output, distinct, reindex, random, seed):
 
     # ---------- 写 ----------
 
-    df.to_csv(output, index=False)
+    write_df(df, output)
     click.echo(output)
 
 

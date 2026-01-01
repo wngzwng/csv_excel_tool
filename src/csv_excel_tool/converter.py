@@ -56,7 +56,7 @@ def excel_to_csv(
     try:
         # 注意：pandas 的 read_excel 对 dtype=str 兼容性比 read_csv 弱
         # 如果 dtype 无效，仍然能读取，只是当作 object
-        df = pd.read_excel(excel_path, dtype=dtype)
+        df = pd.read_excel(excel_path, dtype=dtype, engine="openpyxl")
     except Exception as e:
         if logger:
             logger.error(f"读取 Excel 失败: {str(e)}")
