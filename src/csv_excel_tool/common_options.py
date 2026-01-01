@@ -46,9 +46,9 @@ def common_dataframe_options(func):
         "--sortkey",
         type=str,
         default=None,
-        matavar="COLS",
+        metavar="COLS",
         help="排序列名，多个以逗号分隔 (如: size,difficulty); 不传表示不排序"
-    )
+    )(func)
 
     return func
 
