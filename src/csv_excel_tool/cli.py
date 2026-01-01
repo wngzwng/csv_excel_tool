@@ -25,7 +25,7 @@ def cli():
 @click.option("--asstr", type=str, default=None, help="指定需要强制转为字符串的列名，多个以逗号分隔")
 # @click.option("--rerange", type=str, default=None, help="需要进行重新编号的列名（从 1 开始）")
 @common_dataframe_options
-def convert(input_path, asstr, distinct, reindex, random, seed):
+def convert(input_path, asstr, distinct, reindex, random, seed, sortkey):
     """ CSV <-> Excel 转换 (支持通用后处理) """
     
     from csv_excel_tool.pipeline import apply_common_pipeline
@@ -40,7 +40,7 @@ def convert(input_path, asstr, distinct, reindex, random, seed):
         if asstr else None
     )
 
-    distinct_cols, reindex_col = parse_common_options(distinct, reindex)
+    distinct_cols, reindex_col, sort_col = parse_common_options(distinct, reindex, sortkey)
 
     logger.info(f"输入文件: {str(p)}")
 
@@ -51,6 +51,7 @@ def convert(input_path, asstr, distinct, reindex, random, seed):
             reindex_col=reindex_col,
             logger=logger,
             random=random,
+            sortkey=sort_col,
             seed=seed
         )
 
@@ -113,7 +114,7 @@ def merge(folder, pattern, output):
 @click.argument("input", required=False)
 @click.option('--output', '-o', type=str, required=True, help='处理过后的输出文件')
 @common_dataframe_options
-def run(input, output, distinct, reindex, random, seed):
+def run(input, output, distinct, reindex, random, seed, sortkey):
     """
     通用 DataFrame 处理命令（Unix filter 风格）
     """
@@ -123,7 +124,7 @@ def run(input, output, distinct, reindex, random, seed):
     from csv_excel_tool.pipeline import apply_common_pipeline
     from csv_excel_tool.common_options import parse_common_options
 
-    distinct_cols, reindex_col = parse_common_options(distinct, reindex)
+    distinct_cols, reindex_col, sort_col = parse_common_options(distinct, reindex, sortkey)
 
     # ---------- 读 ----------
     df = read_df(input)
@@ -135,6 +136,7 @@ def run(input, output, distinct, reindex, random, seed):
         reindex_col=reindex_col,
         logger=logger,
         random=random,
+        sortkey=sort_col,
         seed=seed
     )
 
