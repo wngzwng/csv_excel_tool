@@ -1,5 +1,6 @@
 # src/csv_excel_tool/utils.py
 import sys
+import os
 from tqdm import tqdm as _tqdm
 from functools import partial
 
@@ -20,3 +21,15 @@ def tqdm(*args, **kwargs):
 
 # 可选：再加一个强制静默的版本
 tqdm_quiet = partial(tqdm, disable=True)
+
+
+
+def extract_ext(path: str, default: str = "csv") -> str:
+    """
+    提取文件扩展名（不含点，统一为小写）
+
+    若 path 无扩展名，则返回 default
+    """
+    _, ext = os.path.splitext(path)
+    ext = ext.lower().lstrip(".") # 去掉前导点号
+    return ext or default

@@ -61,7 +61,7 @@ def parse_common_options(distinct, reindex, sortkey):
     reindex_col = reindex.strip() if reindex else None
 
     sort_cols = (
-        [c.strip() for c in distinct.split(",") if c.strip()]
-        if distinct else None
+        [c.strip() for c in sortkey.split(",") if c.strip()]
+        if sortkey else None
     )
     return distinct_cols, reindex_col, sort_cols

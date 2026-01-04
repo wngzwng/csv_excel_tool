@@ -60,15 +60,13 @@ def apply_sort(
 
     # ---------- 日志 ----------
     if logger:
-        logger.info(
-            "sort",
-            extra={
-                "by": by,
-                "ascending": ascending,
-                "na_position": na_position,
-                "rows": before,
-            },
+        msg = (
+            "sort\n"
+            f"  by          : {by}\n"
+            f"  ascending   : {ascending}\n"
+            f"  na_position : {na_position}\n"
+            f"  rows        : {before}"
         )
-
+        logger.info(msg)
     return result
 

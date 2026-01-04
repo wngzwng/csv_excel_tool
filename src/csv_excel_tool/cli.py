@@ -3,9 +3,14 @@ import click
 import time
 from csv_excel_tool.common_options import common_dataframe_options
 from csv_excel_tool.converter import csv_to_excel, excel_to_csv
-from csv_excel_tool.splitter import split_csv, split_excel
+# from csv_excel_tool.splitter import split_csv, split_excel
+from csv_excel_tool.splitter import (
+    SplitIntent,
+    Splitter,
+    resolve_splitter
+)
 from csv_excel_tool.merger import merge_csvs, merge_excels
-from csv_excel_tool.utils import tqdm
+from csv_excel_tool.utils import tqdm, extract_ext
 from csv_excel_tool.df_io import read_df, write_df
 from csv_excel_tool.fdlogger import FdLogger
 from pathlib import Path
@@ -72,25 +77,75 @@ def convert(input_path, asstr, distinct, reindex, random, seed, sortkey):
 
     click.echo(str(out))  # 输出到 stdout，让管道自然处理
 
-# 2. 拆分
+# # 2. 拆分
+# @cli.command()
+# @click.argument('input_path', type=click.Path(exists=True))
+# @click.option('--rows', '-r', default=100000, help='每个分片最大行数（默认10万）')
+# @click.option('--output-dir', '-o', default=None, help='输出目录（默认在源文件同目录创建 split_xxx）')
+# def split(input_path, rows, output_dir):
+#     """拆分 CSV 或 Excel"""
+#     p = Path(input_path)
+#     out_dir = Path(output_dir) if output_dir else p.parent / f"split_{p.stem}"
+#     out_dir.mkdir(exist_ok=True)
+
+#     logger.info(f"开始拆分文件 {input_path}")
+#     if p.suffix.lower() == '.csv':
+#         files = split_csv(p, out_dir, max_rows=rows)
+#     else:
+#         files = split_excel(p, out_dir, max_rows=rows)
+
+#     for f in files:
+#         click.echo(str(f))   # 每行输出一个拆分后的文件名（支持管道）
+
 @cli.command()
 @click.argument('input_path', type=click.Path(exists=True))
-@click.option('--rows', '-r', default=100000, help='每个分片最大行数（默认10万）')
-@click.option('--output-dir', '-o', default=None, help='输出目录（默认在源文件同目录创建 split_xxx）')
-def split(input_path, rows, output_dir):
-    """拆分 CSV 或 Excel"""
+@click.option('--rows', '-r', default=100000, show_default=True,
+              help='按行数拆分')
+@click.option('--by', default=None,
+              help='按列分组拆分')
+@click.option('--where', default=None,
+              help='条件拆分，格式 COLUMN=VALUE')
+@click.option('--output-dir', '-o', default=None,
+              help='输出目录')
+@click.option('--by-max-groups', default=100,
+              help='按列分组的最大组数限制')
+def split(input_path, rows, by, where, output_dir, by_max_groups):
+    """
+    拆分 CSV / Excel
+
+    拆分意图（三选一）：
+      - 默认：按行数
+      - --by COLUMN
+      - --where COLUMN=VALUE
+    """
+
+    intent = SplitIntent(
+        rows=rows,
+        by=by,
+        where=where,
+    )
+
     p = Path(input_path)
     out_dir = Path(output_dir) if output_dir else p.parent / f"split_{p.stem}"
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"开始拆分文件 {input_path}")
-    if p.suffix.lower() == '.csv':
-        files = split_csv(p, out_dir, max_rows=rows)
-    else:
-        files = split_excel(p, out_dir, max_rows=rows)
+    df = read_df(input_path)
+    ext = extract_ext(input_path)
+    splitter = resolve_splitter(intent, prefix=p.stem, ext=ext, max_groups=by_max_groups)
 
-    for f in files:
-        click.echo(str(f))   # 每行输出一个拆分后的文件名（支持管道）
+    msg = (
+        "start split\n"
+        f"  input       : {p}\n"
+        f"  intent      : {intent.describe()}\n"
+        f"  output_dir  : {out_dir}\n"
+        f"  total_rows  : {len(df)}"
+    )
+    logger.info(msg)
+
+    for name, chunk in splitter.split(df):
+        out_path = out_dir / name
+        write_df(chunk, out_path)
+        click.echo(str(out_path))
 
 # 3. 合并
 @cli.command()
